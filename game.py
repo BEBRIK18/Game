@@ -2,6 +2,8 @@ from random import *
 
 from pygame import *
 
+game_status = 0
+
 class GameSprite(sprite.Sprite):
     def __init__(self, player_image, player_x, player_y, player_speed, length, higth):
         super().__init__()
@@ -31,42 +33,110 @@ class Player2(GameSprite):
             self.rect.y += self.speed
 
 class Tennis_Ball(GameSprite):
+    def __init__(self,player_image, player_x, player_y, player_speed, length, higth, speed_x = 3, speed_y = 3, count = 0):
+        super().__init__(player_image, player_x, player_y, player_speed, length, higth)
+        self.speed_x = speed_x
+        self.speed_y = speed_y
+        self.count = count
+
     def update(self):
-        self.rect.x += self.speed
-        if self.rect.x >= 600:
-            self.rect.x = 150
+        self.rect.x += self.speed_x
+        self.rect.y += self.speed_y
+
+        if self.rect.y > 450 or self.rect.y < 0:
+            self.speed_y *= -1
+        if sprite.collide_rect(player, self) or sprite.collide_rect(player2, self):
+            self.speed_x *= -1
+            self.count += 1
+        if self.count == 4:
+            self.speed_x += 1
+            self.speed_y += 1
+            self.count = 0
+
+class Button(GameSprite):
+    def collidepoint(self, mouse_x, mouse_y):
+        return self.rect.collidepoint(mouse_x, mouse_y)
 
 
 window = display.set_mode((700, 500))
 display.set_caption('Пинг-понг')
 
-player = Player('stick.png', -10, 50, 10, 70, 200)
-player2 = Player2('stick.png', 650, 50, 10, 70, 200)
+player = Player('stick1.png', -10, 50, 10, 70, 200)
+player2 = Player2('stick1.png', 650, 50, 10, 70, 200)
 ball = Tennis_Ball('tennis.png', 200, 250, 5, 50, 50)
+play = Button('play.png', 200, 250, 0, 100, 100)
+
+counter1 = 0
+counter2 = 0
+
+font.init()
+font1 = font.Font(None, 70)
+font2 = font.Font(None, 40)
+win1 = font1.render('Player1 won', True, (255, 0, 0))
+win2 = font1.render('Player2 won', True, (255, 0, 0))
 
 
 FPS = 60
 clock = time.Clock()
 game = True
 finish = False
+menu = False
+speed_x = 3
+speed_y = 3
+
+
 while game:
     window.fill((0, 150, 255))
     key_pressed = key.get_pressed()
 
-    if finish != True:
-        player.update()
-        player2.update()
-        ball.update()
+    events = event.get()
+
+    if game_status == 0:
+        if menu != True:
+            play.reset()
+            mouse_x, mouse_y = mouse.get_pos()
+            for e in events:
+                if e.type == MOUSEBUTTONDOWN: 
+                    if play.collidepoint(mouse_x, mouse_y) and e.button == 1:
+                        game_status = 1
+
+
+    if game_status == 1:
+        if finish != True:
+            player.update()
+            player2.update()
+            ball.update()
+            countt1 = font2.render(f'Player1:{counter1}', True, (255, 0, 0))
+            countt2 = font2.render(f'Player2:{counter2}', True, (255, 0, 0))
+            window.blit(countt1, (50, 50))
+            window.blit(countt2, (530, 50))
+
+
+        if ball.rect.x < 0:
+            counter2 += 1
+            ball.rect.x = 200
+            ball.rect.y = 200
+        if ball.rect.x > 700:
+            counter1 += 1
+            ball.rect.x = 200
+            ball.rect.y = 200
+        if counter2 == 2:
+            window.blit(win2, (100, 250))
+            finish = True    
+
+        if counter1 == 2:
+            window.blit(win1, (100, 250))
+            finish = True 
 
 
 
-    for e in event.get():
+        player.reset()
+        player2.reset()
+        ball.reset()
+        clock.tick(FPS)
+
+    for e in events:
         if e.type == QUIT:
             game = False
-
-    player.reset()
-    player2.reset()
-    ball.reset()
-    clock.tick(FPS)
-
-    display.update()    
+    display.update()   
+ 
